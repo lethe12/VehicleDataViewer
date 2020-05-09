@@ -1,6 +1,7 @@
 package com.grean.vehicledataviewer.model;
 
 import com.baidu.mapapi.model.LatLng;
+import com.grean.vehicledataviewer.Sensor.SensorData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,12 +11,24 @@ import java.util.List;
  */
 
 public class TrackFormat {
-    private float rang = 5f;
+    private static float rang = 5f;
     private List<LatLng> points = new ArrayList<>();
     private List<Integer> colors = new ArrayList<>();
     private ColorsConverter colorsConverter = new ColorsConverter();
 
+    public void setStartPoint(SensorData data){
+        points.clear();
+        colors.clear();
+        LatLng latLng = new LatLng(data.getLat(),data.getLng());
+        points.add(latLng);
+    }
 
+    public void addOnePoint(SensorData data){
+        LatLng latLng = new LatLng(data.getLat(),data.getLng());
+        colorsConverter.setH((int) (data.getTvocData() / rang * 359));
+        points.add(latLng);
+        colors.add(colorsConverter.getColor());
+    }
     /** HSV转RGB
      * h = 0~359 s=0~1 v= 0~1
      */
@@ -66,7 +79,7 @@ public class TrackFormat {
         }
 
         public int getColor(){
-            int result = 0x80000000;
+            int result = 0xaa000000;
             int iR= (int) (r*255)<<16;
             int iG= (int) (g*255)<<8;
             int iB= (int) (b*255);
