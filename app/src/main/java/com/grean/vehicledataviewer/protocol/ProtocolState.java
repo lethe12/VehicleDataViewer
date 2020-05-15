@@ -16,6 +16,12 @@ public interface ProtocolState {
     void handleReceiveBuff(byte[] buff,int length);
 
     /**
+     * 是否已经连接
+     * @return
+     */
+    boolean isConnect();
+
+    /**
      * 获取实时数据
      */
     void getRealTimeData();

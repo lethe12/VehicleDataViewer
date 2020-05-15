@@ -242,11 +242,12 @@ public class ProtocolTcpServer extends Observable implements  ProtocolCommand{
                 if (info.isConnected()){//已连接服务器
                     try {
                         if(!info.getSend().isEmpty()){
+                            //Log.d(tag,info.name+" send buff rest size "+String.valueOf(sendBuff.size())
+                            //        +"ID="+String.valueOf(getId()));
                             info.getSocket().sendUrgentData(0xFF);
                             info.getOutputStream().write(info.getSend().poll());
                             info.getOutputStream().flush();
-                            //Log.d(tag,info.name+" send buff rest size "+String.valueOf(sendBuff.size())
-                                   // +"ID="+String.valueOf(getId()));
+
                         }
                     } catch (IOException e) {
                         Log.d(tag,"发送失败");
@@ -261,14 +262,30 @@ public class ProtocolTcpServer extends Observable implements  ProtocolCommand{
                     info.setSocket(new Socket());
                     info.setReceiverThread(new ReceiverThread(info));
                     info.getReceiverThread().start();
-                    /*receiverThread = new ReceiverThread();
-                    receiverThread.start();*/
+
+                    /**
+                     * 等待连接
+                     */
+                    int waitTimes = 0;
+                    do {
+                        waitTimes++;
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }while (!info.isConnected()&&(waitTimes < 29));
 
                     try {
-                        Thread.sleep(29900);
+                        Thread.sleep(900);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+                    /*try {
+                        Thread.sleep(29900);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }*/
                 }
 
                 try {

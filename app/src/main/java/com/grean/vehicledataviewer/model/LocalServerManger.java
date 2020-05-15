@@ -18,6 +18,7 @@ import java.util.List;
  */
 
 public class LocalServerManger {
+    private static final String tag = "LocalServerManger";
     private LocalServerListener listener;
     private Context context;
     private WifiAdmin wifiAdmin;
@@ -64,7 +65,10 @@ public class LocalServerManger {
         @Override
         public void run() {
             super.run();
-            scanServer();
+            info.showProcess(5);
+            if(!isServerAvailable()) {
+                scanServer();
+            }
             times = 0;
             do{
                 info.showInfo("正在连接设备...");
@@ -75,21 +79,40 @@ public class LocalServerManger {
                     e.printStackTrace();
                 }
             }while ((!isServerAvailable())&&(times < 10));
+            info.showProcess(35);
             if(times < 10){
                 //开始连接服务器
-                format.setServerAddress("192.168.43.1");
-                format.setServerPort(8888);
-                ProtocolTcpServer.getInstance().setConfig(format);
-                ProtocolTcpServer.getInstance().setState(GetProtocols.getInstance().getProtocolState());
-                ProtocolTcpServer.getInstance().connectServer(context);
-                try {
-                    sleep(4000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                if (ProtocolTcpServer.getInstance().getFormat()==null){
+                    Log.d(tag,"new connected");
+                    format.setServerAddress("192.168.43.1");
+                    format.setServerPort(8888);
+                    ProtocolTcpServer.getInstance().setConfig(format);
+                    ProtocolTcpServer.getInstance().setState(GetProtocols.getInstance().getProtocolState());
+                    ProtocolTcpServer.getInstance().connectServer(context);
+                    try {
+                        sleep(4000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }/*else {
+                    if (!ProtocolTcpServer.getInstance().isConnected()) {
+                        Log.d(tag,"disconnected and start new");
+                        format.setServerAddress("192.168.43.1");
+                        format.setServerPort(8888);
+                        ProtocolTcpServer.getInstance().setConfig(format);
+                        ProtocolTcpServer.getInstance().setState(GetProtocols.getInstance().getProtocolState());
+                        ProtocolTcpServer.getInstance().connectServer(context);
+                        try {
+                            sleep(4000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }*/
+                info.showProcess(65);
                 listener.readyToScan();
 
-                listener.onComplete(true);
+                //listener.onComplete(true);
             }else{//超时
                 listener.onComplete(false);
             }

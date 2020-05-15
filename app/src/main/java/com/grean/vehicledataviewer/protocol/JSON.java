@@ -60,7 +60,7 @@ public class JSON {
         if(object.has("Lat")){
             data.setLat(object.getDouble("Lat"));
         }
-
+        data.converterCoordinate();
     }
 
 

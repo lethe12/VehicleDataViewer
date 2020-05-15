@@ -1,5 +1,7 @@
 package com.grean.vehicledataviewer.protocol;
 
+import android.util.Log;
+
 import com.grean.vehicledataviewer.Sensor.SensorData;
 
 import org.json.JSONException;
@@ -9,6 +11,7 @@ import org.json.JSONException;
  */
 
 public class DataAcquisitionState implements ProtocolState{
+    private static final String tag = "DataAcquisitionState";
     private ProtocolCommand command;
     private SensorData data;
 
@@ -16,9 +19,12 @@ public class DataAcquisitionState implements ProtocolState{
         this.command = command;
     }
 
+
+
     @Override
     public void handleReceiveBuff(byte[] buff, int length) {
         String string = new String(buff,0,length);
+        //Log.d(tag,string);
         if(JSON.isFrameRight(string)){
             try {
                 if(GetProtocols.getInstance().getProtocolInfo()!=null) {
@@ -30,6 +36,11 @@ public class DataAcquisitionState implements ProtocolState{
         }else{
 
         }
+    }
+
+    @Override
+    public boolean isConnect() {
+        return command.isConnected();
     }
 
     @Override

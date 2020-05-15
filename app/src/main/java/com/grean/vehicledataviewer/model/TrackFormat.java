@@ -1,5 +1,7 @@
 package com.grean.vehicledataviewer.model;
 
+import android.util.Log;
+
 import com.baidu.mapapi.model.LatLng;
 import com.grean.vehicledataviewer.Sensor.SensorData;
 
@@ -11,27 +13,56 @@ import java.util.List;
  */
 
 public class TrackFormat {
-    private static float rang = 5f;
+    private static final String tag = "TrackFormat";
     private List<LatLng> points = new ArrayList<>();
     private List<Integer> colors = new ArrayList<>();
-    private ColorsConverter colorsConverter = new ColorsConverter();
+    //private ColorsConverter colorsConverter = new ColorsConverter();
 
-    public void setStartPoint(SensorData data){
+    public void setStartPoint(double lat,double lng){
         points.clear();
         colors.clear();
-        LatLng latLng = new LatLng(data.getLat(),data.getLng());
+        LatLng latLng = new LatLng(lat,lng);
         points.add(latLng);
     }
 
-    public void addOnePoint(SensorData data){
-        LatLng latLng = new LatLng(data.getLat(),data.getLng());
-        colorsConverter.setH((int) (data.getTvocData() / rang * 359));
+    public int getSize(){
+        return colors.size();
+    }
+
+    public List<LatLng> getPoints() {
+        return points;
+    }
+
+    public List<Integer> getColors() {
+        return colors;
+    }
+
+    public static int dataToColor(double data){
+        double waveLength = data/SensorData.TVocRange*(RgbCalculator.LEN_MAX-RgbCalculator.LEN_MIN)+RgbCalculator.LEN_MIN;
+        int color = RgbCalculator.Calc(waveLength);
+        //Log.d(tag,"data = "+String.valueOf(data)+";waveLength"+String.valueOf(waveLength));
+        //Log.d(tag,"color="+Integer.toHexString(color));
+        return color;
+    }
+
+
+
+    public void addOnePoint(double lat, double lng, float data){
+        LatLng latLng = new LatLng(lat,lng);
         points.add(latLng);
-        colors.add(colorsConverter.getColor());
+        double waveLength = data/SensorData.TVocRange*(RgbCalculator.LEN_MAX-RgbCalculator.LEN_MIN)+RgbCalculator.LEN_MIN;
+        int color = RgbCalculator.Calc(waveLength);
+        //Log.d(tag,"data = "+String.valueOf(data)+";waveLength"+String.valueOf(waveLength));
+        //Log.d(tag,"color="+Integer.toHexString(color));
+        colors.add(color);
+
+        //colorsConverter.setH((int) (data / rang * 359));
+        //colorsConverter.converter();
+        //colors.add(colorsConverter.getColor());
     }
     /** HSV转RGB
      * h = 0~359 s=0~1 v= 0~1
-     */
+
     private class ColorsConverter{
         private float r,g,b,s=0.5f,v=0.5f;
         private int h;
@@ -98,6 +129,6 @@ public class TrackFormat {
             this.v = v;
         }
 
-    }
+    }*/
 
 }

@@ -1,5 +1,6 @@
 package com.grean.vehicledataviewer.presenter;
 
+import com.baidu.mapapi.model.LatLng;
 import com.grean.vehicledataviewer.Sensor.SensorData;
 
 /**
@@ -9,4 +10,6 @@ import com.grean.vehicledataviewer.Sensor.SensorData;
 public interface MainDisplayListener {
     void onRealTimeResult(SensorData data);
     void onToast(String string);
+    void setFirstPoint(SensorData data);
+    void addPoint(SensorData data);
 }
