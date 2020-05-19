@@ -1,13 +1,20 @@
 package com.grean.vehicledataviewer;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
@@ -67,8 +74,8 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     }
                     break;
                 case msgRealTimeData:
-                    tvDebug.setText("Real time data is: TVoc="+ tools.float2String4(data.getTvocData())
-                            +"\r\nLng="+String.valueOf(data.getLng())+"Lat="+String.valueOf(data.getLat()));
+                    tvDebug.setText("Real time data\r\nTVoc="+ tools.float2String4(data.getTvocData())
+                            +"\r\nLng="+String.valueOf(data.getLng())+"\r\nLat="+String.valueOf(data.getLat()));
                     break;
                 case msgToast:
                     Toast.makeText(MainActivity.this,stringToast,Toast.LENGTH_SHORT).show();
@@ -94,13 +101,50 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
         }
     };
 
+    // 提示用户该请求权限的弹出框
+    private void showDialogTipUserRequestPermission() {
+        new android.support.v7.app.AlertDialog.Builder(this).setTitle("系统权限不可用")
+                .setMessage("由于在线扬尘需要获权限；\n否则，您将无法正常使用")
+                .setPositiveButton("立即开启", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        startRequestPermission();
+                    }
+                }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                finish();
+            }
+        }).setCancelable(false).show();
+    }
+
+    // 开始提交请求权限
+    private void startRequestPermission() {
+        PackageManager pm = getPackageManager();
+        PackageInfo pack = null;
+        try {
+            pack = pm.getPackageInfo("com.grean.vehicledataviewer", PackageManager.GET_PERMISSIONS);
+            String[] permissionStrings = pack.requestedPermissions;
+            ActivityCompat.requestPermissions(this, permissionStrings, 321);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//禁止自动锁屏
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);//强制竖屏
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);//强制横屏
         setContentView(R.layout.activity_main);
         initView();
+
+        PackageManager pm = getPackageManager();
+        boolean permission = (PackageManager.PERMISSION_GRANTED ==
+                pm.checkPermission("android.permission.ACCESS_COARSE_LOCATION",
+                        "com.grean.vehicledataviewer"));
+        if (!permission) {
+            showDialogTipUserRequestPermission();
+        }
 
         localServerManger = new LocalServerManger(this,this);
         localServerManger.scanServer();
@@ -127,6 +171,8 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
         }
 
     }
+
+
 
     private void initView(){
         tvDebug = (TextView) findViewById(R.id.tvDebug);

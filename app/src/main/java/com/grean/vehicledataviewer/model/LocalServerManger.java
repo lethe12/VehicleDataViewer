@@ -35,6 +35,7 @@ public class LocalServerManger {
         wifiAdmin.startScan();
         List<ScanResult> list = wifiAdmin.getWifiList();
         for(int i=0;i<list.size();i++){
+            Log.d(tag,list.get(i).SSID);
             if(list.get(i).SSID.equals("greanAir")){
                 wifiAdmin.addNetwork(wifiAdmin.CreateWifiInfo("greanAir","1234567890",3));
                 break;
@@ -67,6 +68,7 @@ public class LocalServerManger {
             super.run();
             info.showProcess(5);
             if(!isServerAvailable()) {
+                //Log.d(tag,"启用新连接");
                 scanServer();
             }
             times = 0;

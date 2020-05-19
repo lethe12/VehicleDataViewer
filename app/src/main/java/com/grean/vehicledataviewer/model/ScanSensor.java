@@ -57,7 +57,7 @@ public class ScanSensor implements ProtocolInfo{
     }
 
     private void simulateData(){
-        lastData+=0.02;
+        lastData+=0.005;
         if(lastData >= SensorData.TVocRange){
             lastData = SensorData.TVocRange;
         }
