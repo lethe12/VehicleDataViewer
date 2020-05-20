@@ -1,27 +1,33 @@
 package com.grean.vehicledataviewer;
 
-import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.InputType;
+import android.util.Log;
 import android.view.View;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.offline.MKOLSearchRecord;
+import com.baidu.mapapi.map.offline.MKOLUpdateElement;
+import com.baidu.mapapi.map.offline.MKOfflineMap;
+import com.baidu.mapapi.map.offline.MKOfflineMapListener;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.utils.CoordinateConverter;
 import com.grean.vehicledataviewer.Sensor.SensorData;
@@ -35,7 +41,10 @@ import com.grean.vehicledataviewer.presenter.MainDisplayListener;
 import com.grean.vehicledataviewer.protocol.GetProtocols;
 import com.tools;
 
-public class MainActivity extends AppCompatActivity implements MainDisplayListener,View.OnClickListener,LocalServerListener{
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements MainDisplayListener,View.OnClickListener,LocalServerListener,MKOfflineMapListener {
     private static final String tag = "MainActivity";
     private MapView mMapView = null;
     private BaiduMap baiduMap;
@@ -44,6 +53,9 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     private TextView tvDebug;
     private LocalServerManger localServerManger;
     private DrawTracks drawTracks;
+    private MKOfflineMap mOffline;
+    private LocationManager locationManager;
+
 
     private DialogProcessFragmentBarStyle dialog;
     private String stringToast,stringTableName;
@@ -75,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     break;
                 case msgRealTimeData:
                     tvDebug.setText("Real time data\r\nTVoc="+ tools.float2String4(data.getTvocData())
-                            +"\r\nLng="+String.valueOf(data.getLng())+"\r\nLat="+String.valueOf(data.getLat()));
+                            +"ppm\r\nLng="+String.valueOf(data.getLng())+"\r\nLat="+String.valueOf(data.getLat()));
                     break;
                 case msgToast:
                     Toast.makeText(MainActivity.this,stringToast,Toast.LENGTH_SHORT).show();
@@ -154,7 +166,24 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
 
         baiduMap = mMapView.getMap();
         drawTracks = new DrawTracks(baiduMap);
-        drawTracks.newLocalPoint(conversionCoordinate(30.372844,120.155479));
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        //获取当前可用的位置控制器
+        List<String> list = locationManager.getProviders(true);
+
+        if(list.contains(LocationManager.NETWORK_PROVIDER)){
+            Log.d(tag,"LocationManager.NETWORK_PROVIDER");
+            String provider = LocationManager.NETWORK_PROVIDER;
+            Location location = locationManager.getLastKnownLocation(provider);
+            if(location!=null) {
+                drawTracks.newLocalPoint(conversionCoordinate(location.getLatitude(), location.getLongitude()));
+            }
+        }else {
+            Log.d(tag,"do not location");
+            drawTracks.newLocalPoint(conversionCoordinate(30.372844, 120.155479));
+        }
+
+        mOffline = new MKOfflineMap();
+        mOffline.init(this);
 
         if(scanSensor.getTrackCacheSize()>0){//有未完成走航
             new AlertDialog.Builder(this).setTitle("存在未完成走航,是否继续?").setPositiveButton("是", new DialogInterface.OnClickListener() {
@@ -185,6 +214,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
         btnDeleteAllData.setOnClickListener(this);
         btnExportData = (Button) findViewById(R.id.btnExportData);
         btnExportData.setOnClickListener(this);
+        findViewById(R.id.btnOfflineMapManage).setOnClickListener(this);
     }
 
     private LatLng conversionCoordinate(double lat,double lng){
@@ -269,9 +299,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     }
                 }).show();
                 break;
-            case R.id.btnDebug:
 
-                break;
             case R.id.btnDeleteAllData:
                 new AlertDialog.Builder(this).setTitle("是否清空历史数据?").setPositiveButton("是", new DialogInterface.OnClickListener() {
                     @Override
@@ -298,9 +326,75 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                 }).show();
 
                 break;
+            case R.id.btnOfflineMapManage:
+                ArrayList<MKOLUpdateElement> list =  mOffline.getAllUpdateInfo();
+                String[] maps = new String[list.size()];
+                for(int i=0;i<list.size();i++){
+                    //Log.d(tag,list.get(i).cityName+"state = "+String.valueOf(list.get(i).status));
+                    maps[i] = list.get(i).cityName+" "+getCityMapStatus(list.get(i).status);
+                }
+                new AlertDialog.Builder(this).setTitle("离线地图列表").setItems(maps,null).setPositiveButton("新增", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        final EditText cityName = new EditText(MainActivity.this);
+                        cityName.setInputType(InputType.TYPE_CLASS_TEXT);
+                        new AlertDialog.Builder(MainActivity.this).setTitle("请输入需要下载离线地图城市名称").setView(cityName)
+                                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        Log.d(tag,"search city"+cityName.getText().toString());
+                                        ArrayList<MKOLSearchRecord> records = mOffline.searchCity(cityName.getText().toString());
+                                        if (records != null && records.size() == 1) {
+                                            int cityId = records.get(0).cityID;
+                                            Log.d(tag,"开始下载");
+                                            mOffline.start(cityId);
+                                            Toast.makeText(MainActivity.this,"后台下载",Toast.LENGTH_SHORT).show();
+
+                                        }else{
+                                            Toast.makeText(MainActivity.this,"输入城市名称有误",Toast.LENGTH_SHORT).show();
+                                        }
+                                    }
+                                }).setNegativeButton("取消",null).show();
+                    }
+                }).show();
+                break;
+            case R.id.btnDebug:
+
+
+                break;
             default:
 
                 break;
+        }
+    }
+
+    private String getCityMapStatus(int status){
+        switch (status){
+            case MKOLUpdateElement.DOWNLOADING:
+                return "正在下载";
+            case MKOLUpdateElement.eOLDSInstalling:
+                return "离线包正在导入中";
+            case MKOLUpdateElement.eOLDSFormatError:
+                return "数据错误，需重新下载";
+            case MKOLUpdateElement.eOLDSIOError:
+                return "读写异常";
+            case MKOLUpdateElement.eOLDSMd5Error:
+                return "校验失败";
+            case MKOLUpdateElement.eOLDSNetError:
+                return "网络异常";
+            case MKOLUpdateElement.eOLDSWifiError:
+                return "wifi网络异常";
+            case MKOLUpdateElement.FINISHED:
+                return "完成";
+            case MKOLUpdateElement.SUSPENDED:
+                return "已暂停";
+            case MKOLUpdateElement.UNDEFINED:
+                return "未定义";
+            case MKOLUpdateElement.WAITING:
+                return "等待下载";
+            default:
+                return "未知错误";
+
         }
     }
 
@@ -314,5 +408,10 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     public void readyToScan() {
         scanSensor.starScan(this);
 
+    }
+
+    @Override
+    public void onGetOfflineMapState(int i, int i1) {
+        Log.d(tag,"type = "+String.valueOf(i)+"state = "+String.valueOf(i1));
     }
 }
