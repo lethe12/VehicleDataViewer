@@ -1,9 +1,10 @@
 package com.grean.vehicledataviewer.model;
 
-import android.util.Log;
 
 import com.baidu.mapapi.model.LatLng;
+import com.github.mikephil.charting.data.Entry;
 import com.grean.vehicledataviewer.Sensor.SensorData;
+import com.tools;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,8 +18,28 @@ public class TrackFormat {
     private List<LatLng> points = new ArrayList<>();
     private List<Integer> colors = new ArrayList<>();
     //private ColorsConverter colorsConverter = new ColorsConverter();
+    private List<String> xDataList = new ArrayList<>();
+    private List<Entry> yDataList = new ArrayList<Entry>();
+    private List<String> dateList = new ArrayList<>();
+    private List<List<String>> dataList=new ArrayList<>();
 
-    public void setStartPoint(double lat,double lng){
+    public List<String> getxDataList() {
+        return xDataList;
+    }
+
+    public List<Entry> getyDataList() {
+        return yDataList;
+    }
+
+    public List<String> getDateList() {
+        return dateList;
+    }
+
+    public List<List<String>> getDataList() {
+        return dataList;
+    }
+
+    public void setStartPoint(double lat, double lng){
         points.clear();
         colors.clear();
         LatLng latLng = new LatLng(lat,lng);
@@ -47,7 +68,7 @@ public class TrackFormat {
 
 
 
-    public void addOnePoint(double lat, double lng, float data){
+    public void addOnePoint(double lat, double lng, float data,long date,int id){
         LatLng latLng = new LatLng(lat,lng);
         points.add(latLng);
         double waveLength = data/SensorData.TVocRange*(RgbCalculator.LEN_MAX-RgbCalculator.LEN_MIN)+RgbCalculator.LEN_MIN;
@@ -55,7 +76,14 @@ public class TrackFormat {
         //Log.d(tag,"data = "+String.valueOf(data)+";waveLength"+String.valueOf(waveLength));
         //Log.d(tag,"color="+Integer.toHexString(color));
         colors.add(color);
-
+        xDataList.add(tools.timeToChartString(date));
+        yDataList.add(new Entry(id,data));
+        dateList.add(tools.timeToChartString(date));
+        List<String> item = new ArrayList<>();
+        item.add(tools.float2String4(data));
+        item.add(tools.float2String4((float) lat));
+        item.add(tools.float2String4((float) lng));
+        dataList.add(item);
         //colorsConverter.setH((int) (data / rang * 359));
         //colorsConverter.converter();
         //colors.add(colorsConverter.getColor());

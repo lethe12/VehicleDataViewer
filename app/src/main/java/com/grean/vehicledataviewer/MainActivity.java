@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Matrix;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -22,6 +23,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.ScrollablePanel.ElementInfo;
+import com.ScrollablePanel.HistoryDataPanelAdapter;
+import com.ScrollablePanel.ScrollablePanel;
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.MapView;
 import com.baidu.mapapi.map.offline.MKOLSearchRecord;
@@ -30,7 +34,9 @@ import com.baidu.mapapi.map.offline.MKOfflineMap;
 import com.baidu.mapapi.map.offline.MKOfflineMapListener;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.utils.CoordinateConverter;
+import com.github.mikephil.charting.charts.LineChart;
 import com.grean.vehicledataviewer.Sensor.SensorData;
+import com.grean.vehicledataviewer.model.DrawLinerChart;
 import com.grean.vehicledataviewer.model.DrawTracks;
 import com.grean.vehicledataviewer.model.LocalServerManger;
 import com.grean.vehicledataviewer.model.ScanSensor;
@@ -40,7 +46,7 @@ import com.grean.vehicledataviewer.presenter.LocalServerListener;
 import com.grean.vehicledataviewer.presenter.MainDisplayListener;
 import com.grean.vehicledataviewer.protocol.GetProtocols;
 import com.tools;
-
+import com.grean.vehicledataviewer.R;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +61,12 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     private DrawTracks drawTracks;
     private MKOfflineMap mOffline;
     private LocationManager locationManager;
+    private DrawLinerChart drawLinerChart;
+    private LineChart lineChart;
+    private ScrollablePanel panel;
+    private HistoryDataPanelAdapter historyDataPanelAdapter;
+    private String[] elementNames ={"TVoc","经度","纬度"};
+    private String[] elementUnit={"ppm"," "," "};
 
 
     private DialogProcessFragmentBarStyle dialog;
@@ -63,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     private boolean scanResult;
     private static final int msgDismissDialog = 1,msgRealTimeData = 2,
             msgToast = 3,msgNewPoint=4,msgNewTrack=5,msgSetFirstPoint=6,
-    msgNewConnect=7;
+    msgNewConnect=7,msgSearchData=8,msgDeleteData=9,msgExportData=11;
 
     private Handler handler = new Handler(){
         @Override
@@ -79,15 +91,14 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                         btnExportData.setEnabled(false);
                     }else{
                         Toast.makeText(MainActivity.this,"连接失败!",Toast.LENGTH_SHORT).show();
-
                     }
                     if(dialog!=null){
                         dialog.dismiss();
                     }
                     break;
                 case msgRealTimeData:
-                    tvDebug.setText("Real time data\r\nTVoc="+ tools.float2String4(data.getTvocData())
-                            +"ppm\r\nLng="+String.valueOf(data.getLng())+"\r\nLat="+String.valueOf(data.getLat()));
+                    tvDebug.setText("实时数据: TVoc="+ tools.float2String4(data.getTvocData())
+                            +"ppm ("+tools.float2String4((float) data.getLng())+","+tools.float2String4((float) data.getLat())+")");
                     break;
                 case msgToast:
                     Toast.makeText(MainActivity.this,stringToast,Toast.LENGTH_SHORT).show();
@@ -100,12 +111,60 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     break;
                 case msgNewTrack:
                     TrackFormat format = scanSensor.getTrack(stringTableName);
+                    tvDebug.setText("当前显示:"+stringTableName);
+                    drawLinerChart.showChart(lineChart,format.getxDataList(),format.getyDataList(),"单位:ppm","TVoc/时间");
+                    lineChart.setScaleMinima(1.0f,1.0f);
+                    lineChart.getViewPortHandler().refresh(new Matrix(),lineChart,true);//重置坐标
                     drawTracks.drawTracks(format);
+                    setHistoryDataToPanel(historyDataPanelAdapter,format);
+                    //panel.setPanelAdapter(historyDataPanelAdapter);
+                    panel.notifyDataSetChanged();
                     break;
                 case msgNewConnect:
                     dialog = new DialogProcessFragmentBarStyle();
                     dialog.show(getFragmentManager(), "show local server manger");
                     localServerManger.startConnectToServer(dialog);
+                    break;
+                case msgDeleteData:
+                    new AlertDialog.Builder(MainActivity.this).setTitle("是否清空历史数据?").setPositiveButton("是", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            String[] strings = scanSensor.getTrackListStrings();
+                            if(strings.length>0) {
+                                scanSensor.deleteTracks(strings);
+                                Toast.makeText(MainActivity.this,"已清空所有数据",Toast.LENGTH_SHORT).show();
+                            }else{
+                                Toast.makeText(MainActivity.this,"无历史数据",Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }).setNegativeButton("否", null).show();
+                    break;
+                case msgSearchData:
+                    String[] strings = scanSensor.getTrackListStrings();
+                    new AlertDialog.Builder(MainActivity.this).setTitle("历史走航数据").setSingleChoiceItems(strings, -1, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            stringTableName = strings[which];
+                            handler.sendEmptyMessage(msgNewTrack);
+                            dialog.dismiss();
+                        }
+                    }).show();
+                    break;
+                case msgExportData:
+                    String[] trackListStrings = scanSensor.getTrackListStrings();
+                    new AlertDialog.Builder(MainActivity.this).setTitle("选择导出走航数据").setSingleChoiceItems(trackListStrings, -1, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            stringTableName = trackListStrings[which];
+                            String fileName = "走航数据"+stringTableName+"_Export"+tools.nowTime2FileString();
+                            if(scanSensor.exportDataToFile(stringTableName,fileName)){
+                                Toast.makeText(MainActivity.this,"导出成功,路径为 /Grean/"+fileName+".txt",Toast.LENGTH_SHORT).show();
+                            }else{
+                                Toast.makeText(MainActivity.this,"导出失败!",Toast.LENGTH_SHORT).show();
+                            }
+                            dialog.dismiss();
+                        }
+                    }).show();
                     break;
                 default:
                     break;
@@ -182,6 +241,8 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
             drawTracks.newLocalPoint(conversionCoordinate(30.372844, 120.155479));
         }
 
+        drawLinerChart = new DrawLinerChart(this);
+
         mOffline = new MKOfflineMap();
         mOffline.init(this);
 
@@ -201,7 +262,40 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
 
     }
 
+    private void setDefaultElement(HistoryDataPanelAdapter adapter){
+        List<ElementInfo> elementInfoList = new ArrayList<>();
+        for (int i=0;i<3;i++){
+            ElementInfo info = new ElementInfo();
+            info.setName(elementNames[i]);
+            info.setUnit(elementUnit[i]);
+            elementInfoList.add(info);
+        }
+        adapter.setElement(elementInfoList);
 
+        List<String> date = new ArrayList<>();
+        date.add("-");
+        adapter.setDate(date);
+
+        List<List<String>> data = new ArrayList<>();
+        List<String> item = new ArrayList<>();
+        for(int i=0;i<3;i++){
+            item.add("-");
+        }
+        data.add(item);
+        adapter.setData(data);
+    }
+
+    private void addOneItem(HistoryDataPanelAdapter adapter ,SensorData data){
+
+    }
+
+    private void setHistoryDataToPanel(HistoryDataPanelAdapter adapter,TrackFormat format){
+        if(format.getSize()>1){
+            adapter.setDate(format.getDateList());
+            adapter.setData(format.getDataList());
+        }
+
+    }
 
     private void initView(){
         tvDebug = (TextView) findViewById(R.id.tvDebug);
@@ -215,6 +309,12 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
         btnExportData = (Button) findViewById(R.id.btnExportData);
         btnExportData.setOnClickListener(this);
         findViewById(R.id.btnOfflineMapManage).setOnClickListener(this);
+        findViewById(R.id.btnDataManage).setOnClickListener(this);
+        lineChart = (LineChart) findViewById(R.id.lineChart);
+        panel = (ScrollablePanel) findViewById(R.id.scrollable_panel);
+        historyDataPanelAdapter = new HistoryDataPanelAdapter();
+        setDefaultElement(historyDataPanelAdapter);
+        panel.setPanelAdapter(historyDataPanelAdapter);
     }
 
     private LatLng conversionCoordinate(double lat,double lng){
@@ -358,9 +458,39 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     }
                 }).show();
                 break;
+
+            case R.id.btnDataManage:
+                String[] selectMenu={"数据查询","导出数据","删除数据"};
+                new AlertDialog.Builder(this).setItems(selectMenu, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        switch (which){
+                            case 0:
+                                handler.sendEmptyMessage(msgSearchData);
+                                break;
+                            case 1:
+                                handler.sendEmptyMessage(msgExportData);
+                                break;
+                            case 2:
+                                handler.sendEmptyMessage(msgDeleteData);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }).show();
+                break;
             case R.id.btnDebug:
+                lineChart.setScaleMinima(1.0f,1.0f);
+                lineChart.getViewPortHandler().refresh(new Matrix(),lineChart,true);//重置坐标
 
 
+               /* Log.d(tag,"x scale"+String.valueOf(lineChart.getScaleX())+"y scale="+String.valueOf(lineChart.getScaleY()));
+                lineChart.setScaleX(1f);
+                lineChart.setScaleY(1f);
+                lineChart.resetZoom();
+               // lineChart.animateX(500);
+                lineChart.invalidate();*/
                 break;
             default:
 

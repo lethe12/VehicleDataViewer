@@ -322,6 +322,11 @@ import android.annotation.SuppressLint;
 		String nowtimeString = sDateFormat.format(new java.util.Date());
 		return nowtimeString;
 	}
+
+	public static String timeToChartString(long time){
+		SimpleDateFormat sDateFormat = new SimpleDateFormat("HH:mm:ss");
+		return  sDateFormat.format(new Date(time));
+	}
 	/**
 	 * 将计算结果 转成字符转串
 	 * @param data

@@ -207,7 +207,8 @@ public class ScanStoreData {
             format.setStartPoint(cursor.getDouble(3),cursor.getDouble(4));
         }
         while (cursor.moveToNext()){
-            format.addOnePoint(cursor.getDouble(3),cursor.getDouble(4), (float) cursor.getDouble(2));
+            format.addOnePoint(cursor.getDouble(3),cursor.getDouble(4), (float) cursor.getDouble(2),
+                    cursor.getLong(1),cursor.getInt(0));
         }
         cursor.close();
         return format;
