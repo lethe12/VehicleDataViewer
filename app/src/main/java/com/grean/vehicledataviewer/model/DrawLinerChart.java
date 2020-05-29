@@ -2,12 +2,14 @@ package com.grean.vehicledataviewer.model;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.util.Log;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.Description;
 import com.github.mikephil.charting.components.IMarker;
 import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.LimitLine;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
@@ -16,6 +18,7 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.DefaultAxisValueFormatter;
 import com.github.mikephil.charting.formatter.IAxisValueFormatter;
 import com.github.mikephil.charting.highlight.Highlight;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.renderer.XAxisRenderer;
 import com.github.mikephil.charting.utils.MPPointF;
 import com.grean.vehicledataviewer.R;
@@ -28,10 +31,40 @@ import java.util.List;
  */
 
 public class DrawLinerChart {
+    private static final String tag = "DrawLinerChart";
     private Context context;
+    private List<String> dateList=new ArrayList<>();
+    private List<Entry>dataList = new ArrayList<>();
+    private int index;
+
 
     public DrawLinerChart(Context context){
         this.context = context;
+    }
+
+    public void setFirstPoint(LineChart lineChart,String dateString,float data){
+        dateList.clear();
+        dataList.clear();
+        index = 0;
+        dateList.add(dateString);
+        Entry entry = new Entry(0,data);
+        dataList.add(entry);
+        showChart(lineChart,dateList,dataList,"单位:ppm","TVoc/时间");
+    }
+
+    public void addPoint(LineChart lineChart,String dateString,float data){
+        index++;
+        Entry entry = new Entry(index,data);
+        dateList.add(dateString);
+        dataList.add(entry);
+
+        LineData lineData = lineChart.getData();
+        ILineDataSet dataSet = lineData.getMaxEntryCountSet();
+        dataSet.addEntry(entry);
+        Log.d(tag,"index= "+String.valueOf(index));
+
+        lineData.notifyDataChanged();
+        lineChart.notifyDataSetChanged();
     }
 
     /**
@@ -46,8 +79,7 @@ public class DrawLinerChart {
      *            图表标题（如：XXX趋势图）
      * @param curveLable
      *            曲线图例名称（如：--用电量/时间）
-     * @param unitName
-     *            坐标点击弹出提示框中数字单位（如：KWH）
+
      */
     public void showChart( LineChart lineChart, List<String> xDataList,
                                  List<Entry> yDataList, String title, String curveLable) {
@@ -129,6 +161,7 @@ public class DrawLinerChart {
                 }
             }
         });
+
         xAxis.setLabelRotationAngle(30);
         lineChart.animateX(500);
         // lineChart.notifyDataSetChanged();

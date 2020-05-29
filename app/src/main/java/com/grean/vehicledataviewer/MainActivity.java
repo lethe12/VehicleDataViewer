@@ -39,6 +39,7 @@ import com.grean.vehicledataviewer.Sensor.SensorData;
 import com.grean.vehicledataviewer.model.DrawLinerChart;
 import com.grean.vehicledataviewer.model.DrawTracks;
 import com.grean.vehicledataviewer.model.LocalServerManger;
+import com.grean.vehicledataviewer.model.RealTimeTable;
 import com.grean.vehicledataviewer.model.ScanSensor;
 import com.grean.vehicledataviewer.model.TrackFormat;
 import com.grean.vehicledataviewer.presenter.DialogProcessFragmentBarStyle;
@@ -56,6 +57,9 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     private BaiduMap baiduMap;
     private ScanSensor scanSensor;
     private SensorData data;
+    private long dataTimeStamp;
+    private float dataTemp;
+    //private int tableOffset;
     private TextView tvDebug;
     private LocalServerManger localServerManger;
     private DrawTracks drawTracks;
@@ -63,15 +67,15 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     private LocationManager locationManager;
     private DrawLinerChart drawLinerChart;
     private LineChart lineChart;
+    private RealTimeTable table;
     private ScrollablePanel panel;
     private HistoryDataPanelAdapter historyDataPanelAdapter;
-    private String[] elementNames ={"TVoc","经度","纬度"};
-    private String[] elementUnit={"ppm"," "," "};
+
 
 
     private DialogProcessFragmentBarStyle dialog;
     private String stringToast,stringTableName;
-    private Button btnOperateScan,btnSearchData,btnDeleteAllData,btnExportData;
+    private Button btnOperateScan,btnSearchData,btnDeleteAllData,btnExportData,btnDataManage;
     private boolean scanResult;
     private static final int msgDismissDialog = 1,msgRealTimeData = 2,
             msgToast = 3,msgNewPoint=4,msgNewTrack=5,msgSetFirstPoint=6,
@@ -89,6 +93,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                         btnDeleteAllData.setEnabled(false);
                         btnSearchData.setEnabled(false);
                         btnExportData.setEnabled(false);
+                        btnDataManage.setEnabled(false);
                     }else{
                         Toast.makeText(MainActivity.this,"连接失败!",Toast.LENGTH_SHORT).show();
                     }
@@ -104,10 +109,17 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     Toast.makeText(MainActivity.this,stringToast,Toast.LENGTH_SHORT).show();
                     break;
                 case msgSetFirstPoint:
+                    drawLinerChart.setFirstPoint(lineChart,tools.timeToChartString(dataTimeStamp), dataTemp);
                     drawTracks.newLocalPoint(data.getLatLng());
+                    panel.notifyDataSetChanged();
                     break;
                 case msgNewPoint:
+                    drawLinerChart.addPoint(lineChart,tools.timeToChartString(dataTimeStamp), dataTemp);
+                    lineChart.setScaleMinima(1.0f,1.0f);
+                    lineChart.getViewPortHandler().refresh(new Matrix(),lineChart,true);//重置坐标
                     drawTracks.addNewLine(data);
+
+                    panel.notifyDataSetChanged();
                     break;
                 case msgNewTrack:
                     TrackFormat format = scanSensor.getTrack(stringTableName);
@@ -242,7 +254,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
         }
 
         drawLinerChart = new DrawLinerChart(this);
-
+        table = new RealTimeTable();
         mOffline = new MKOfflineMap();
         mOffline.init(this);
 
@@ -262,32 +274,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
 
     }
 
-    private void setDefaultElement(HistoryDataPanelAdapter adapter){
-        List<ElementInfo> elementInfoList = new ArrayList<>();
-        for (int i=0;i<3;i++){
-            ElementInfo info = new ElementInfo();
-            info.setName(elementNames[i]);
-            info.setUnit(elementUnit[i]);
-            elementInfoList.add(info);
-        }
-        adapter.setElement(elementInfoList);
 
-        List<String> date = new ArrayList<>();
-        date.add("-");
-        adapter.setDate(date);
-
-        List<List<String>> data = new ArrayList<>();
-        List<String> item = new ArrayList<>();
-        for(int i=0;i<3;i++){
-            item.add("-");
-        }
-        data.add(item);
-        adapter.setData(data);
-    }
-
-    private void addOneItem(HistoryDataPanelAdapter adapter ,SensorData data){
-
-    }
 
     private void setHistoryDataToPanel(HistoryDataPanelAdapter adapter,TrackFormat format){
         if(format.getSize()>1){
@@ -309,11 +296,12 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
         btnExportData = (Button) findViewById(R.id.btnExportData);
         btnExportData.setOnClickListener(this);
         findViewById(R.id.btnOfflineMapManage).setOnClickListener(this);
-        findViewById(R.id.btnDataManage).setOnClickListener(this);
+        btnDataManage = (Button) findViewById(R.id.btnDataManage);
+        btnDataManage.setOnClickListener(this);
         lineChart = (LineChart) findViewById(R.id.lineChart);
         panel = (ScrollablePanel) findViewById(R.id.scrollable_panel);
         historyDataPanelAdapter = new HistoryDataPanelAdapter();
-        setDefaultElement(historyDataPanelAdapter);
+        RealTimeTable.setDefaultElement(historyDataPanelAdapter);
         panel.setPanelAdapter(historyDataPanelAdapter);
     }
 
@@ -353,14 +341,22 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     }
 
     @Override
-    public void setFirstPoint(SensorData data) {
+    public void setFirstPoint(long date,SensorData data) {
         this.data = data;
+        this.dataTimeStamp = date;
+        this.dataTemp = (float) data.getMeanTVoc();
+        //tableOffset=0;
+        table.setFirstItem(historyDataPanelAdapter,date,data);
         handler.sendEmptyMessage(msgSetFirstPoint);
     }
 
     @Override
-    public void addPoint(SensorData data) {
+    public void addPoint(long date,SensorData data) {
         this.data = data;
+        this.dataTimeStamp = date;
+        this.dataTemp = (float) data.getMeanTVoc();
+        //tableOffset++;
+        table.addOneItem(historyDataPanelAdapter,date,data);
         handler.sendEmptyMessage(msgNewPoint);
     }
 
@@ -376,6 +372,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     btnDeleteAllData.setEnabled(true);
                     btnSearchData.setEnabled(true);
                     btnExportData.setEnabled(true);
+                    btnDataManage.setEnabled(true);
                 }else {
                     drawTracks.clearMap();
                     dialog = new DialogProcessFragmentBarStyle();
@@ -542,6 +539,6 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
 
     @Override
     public void onGetOfflineMapState(int i, int i1) {
-        Log.d(tag,"type = "+String.valueOf(i)+"state = "+String.valueOf(i1));
+        //Log.d(tag,"type = "+String.valueOf(i)+"state = "+String.valueOf(i1));
     }
 }

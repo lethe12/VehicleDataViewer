@@ -27,9 +27,9 @@ public class ScanSensor implements ProtocolInfo{
     private ProtocolState state;
     private boolean run=false;
     private long now,last;
-    private static final  long interval = 20000l;
+    private static final  long interval = 10000l;
     private ScanStoreData storeData;
-    private double lastLat = 0,lastLng = 0;
+    private double lastLat = 30.372844,lastLng = 120.155479;
     private float lastData=0;
 
     public ScanSensor(MainDisplayListener listener, ProtocolState state, Context context){
@@ -47,8 +47,8 @@ public class ScanSensor implements ProtocolInfo{
             lastLat = data.getLat();
             lastLng = data.getLng();
         }
-        double newLat = lastLat+ Math.random()*.002-0.001;;
-        double newLng = lastLng+ Math.random()*.002-0.001;
+        double newLat = lastLat+ Math.random()*0.0002-0.0001;
+        double newLng = lastLng+ Math.random()*0.0002-0.0001;
         lastLat = newLat;
         lastLng = newLng;
         data.setLat(newLat);
@@ -105,8 +105,10 @@ public class ScanSensor implements ProtocolInfo{
 
             listener.onRealTimeResult(data);
             data.calcSum();
-            listener.setFirstPoint(data);
             now = tools.nowtime2timestamp();
+            simulateData();
+            simulateMoving();
+            listener.setFirstPoint(now,data);
             last = now+interval;
             storeData.savePoint(now,data);
             Log.d(tag,"now="+tools.timeStamp2TcpString(now)+"last="+tools.timeStamp2TcpString(last));
@@ -119,16 +121,15 @@ public class ScanSensor implements ProtocolInfo{
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
+                simulateData();
+                simulateMoving();
                 listener.onRealTimeResult(data);
-                //simulateData();
                 data.calcSum();
                 now = tools.nowtime2timestamp();
                 if(now > last){
                     if(data.getLat()!=0) {
-                        //simulateMoving();
-                        listener.addPoint(data);
-                        //Log.d(tag, "new point"+String.valueOf(data.getMeanTVoc()));
+                        listener.addPoint(last,data);
+                        Log.d(tag, "new point"+String.valueOf(data.getMeanTVoc()));
                         storeData.savePoint(last,data);
                         data.clearSum();
                     }

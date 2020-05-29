@@ -10,6 +10,6 @@ import com.grean.vehicledataviewer.Sensor.SensorData;
 public interface MainDisplayListener {
     void onRealTimeResult(SensorData data);
     void onToast(String string);
-    void setFirstPoint(SensorData data);
-    void addPoint(SensorData data);
+    void setFirstPoint(long date,SensorData data);
+    void addPoint(long date,SensorData data);
 }
