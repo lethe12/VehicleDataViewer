@@ -106,8 +106,8 @@ public class ScanSensor implements ProtocolInfo{
             listener.onRealTimeResult(data);
             data.calcSum();
             now = tools.nowtime2timestamp();
-            simulateData();
-            simulateMoving();
+            /*simulateData();
+            simulateMoving();*/
             listener.setFirstPoint(now,data);
             last = now+interval;
             storeData.savePoint(now,data);
@@ -121,18 +121,18 @@ public class ScanSensor implements ProtocolInfo{
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                simulateData();
-                simulateMoving();
+                /*simulateData();
+                simulateMoving();*/
                 listener.onRealTimeResult(data);
                 data.calcSum();
                 now = tools.nowtime2timestamp();
                 if(now > last){
-                    if(data.getLat()!=0) {
-                        listener.addPoint(last,data);
-                        Log.d(tag, "new point"+String.valueOf(data.getMeanTVoc()));
-                        storeData.savePoint(last,data);
-                        data.clearSum();
-                    }
+                    //if(data.getLat()!=0) {
+                    listener.addPoint(last,data);
+                    Log.d(tag, "new point"+String.valueOf(data.getMeanTVoc()));
+                    storeData.savePoint(last,data);
+                    data.clearSum();
+                    //}
                     last += interval;
                 }
             }

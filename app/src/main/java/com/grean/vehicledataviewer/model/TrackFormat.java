@@ -1,6 +1,8 @@
 package com.grean.vehicledataviewer.model;
 
 
+import android.util.Log;
+
 import com.baidu.mapapi.model.LatLng;
 import com.github.mikephil.charting.data.Entry;
 import com.grean.vehicledataviewer.Sensor.SensorData;
@@ -14,6 +16,7 @@ import java.util.List;
  */
 
 public class TrackFormat {
+    private static final int LEN_MIN=450,LEN_MAX=630;
     private static final String tag = "TrackFormat";
     private List<LatLng> points = new ArrayList<>();
     private List<Integer> colors = new ArrayList<>();
@@ -59,7 +62,8 @@ public class TrackFormat {
     }
 
     public static int dataToColor(double data){
-        double waveLength = data/SensorData.TVocRange*(RgbCalculator.LEN_MAX-RgbCalculator.LEN_MIN)+RgbCalculator.LEN_MIN;
+        double waveLength = data/SensorData.TVocRange*(LEN_MAX-LEN_MIN)+LEN_MIN;
+        //Log.d(tag,String.valueOf(waveLength)+":"+String.valueOf(data));
         int color = RgbCalculator.Calc(waveLength);
         //Log.d(tag,"data = "+String.valueOf(data)+";waveLength"+String.valueOf(waveLength));
         //Log.d(tag,"color="+Integer.toHexString(color));
@@ -71,7 +75,7 @@ public class TrackFormat {
     public void addOnePoint(double lat, double lng, float data,long date,int id){
         LatLng latLng = new LatLng(lat,lng);
         points.add(latLng);
-        double waveLength = data/SensorData.TVocRange*(RgbCalculator.LEN_MAX-RgbCalculator.LEN_MIN)+RgbCalculator.LEN_MIN;
+        double waveLength = data/SensorData.TVocRange*(LEN_MAX-LEN_MIN)+LEN_MIN;
         int color = RgbCalculator.Calc(waveLength);
         //Log.d(tag,"data = "+String.valueOf(data)+";waveLength"+String.valueOf(waveLength));
         //Log.d(tag,"color="+Integer.toHexString(color));

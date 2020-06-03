@@ -53,16 +53,16 @@ public class DrawTracks {
         polyLines = baiduMap.addOverlay(polylineOptions);
     }
 
-    public void addNewLine(SensorData data){
-        int color  = TrackFormat.dataToColor(data.getMeanTVoc());
+    public void addNewLine(float data,LatLng newLatLng){
+        int color  = TrackFormat.dataToColor(data);
         List<LatLng> local = new ArrayList<>();
         local.add(lastLatLng);
-        local.add(data.getLatLng());
+        local.add(newLatLng);
         List<Integer> colorList = new ArrayList<>();
         colorList.add(color);
         PolylineOptions polylineOptions = new PolylineOptions().width(10).color(0xAAFF0000).points(local).colorsValues(colorList);
         polyLines = baiduMap.addOverlay(polylineOptions);
-        newLocalPoint(data.getLatLng());
+        newLocalPoint(newLatLng);
         //lastLatLng = new LatLng(data.getLatLng().latitude,data.getLatLng().longitude);
     }
 

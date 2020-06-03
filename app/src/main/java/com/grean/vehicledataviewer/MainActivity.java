@@ -102,8 +102,13 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     }
                     break;
                 case msgRealTimeData:
-                    tvDebug.setText("实时数据: TVoc="+ tools.float2String4(data.getTvocData())
-                            +"ppm ("+tools.float2String4((float) data.getLng())+","+tools.float2String4((float) data.getLat())+")");
+                    if(data.getLat()!=0) {
+                        tvDebug.setText("实时数据: TVoc=" + tools.float2String4(data.getTvocData())
+                                + "ppm (" + tools.float2String4((float) data.getLng()) + "," + tools.float2String4((float) data.getLat()) + ")");
+                    }else{
+                        tvDebug.setText("实时数据: TVoc=" + tools.float2String4(data.getTvocData())
+                                + "ppm (位置更新中)");
+                    }
                     break;
                 case msgToast:
                     Toast.makeText(MainActivity.this,stringToast,Toast.LENGTH_SHORT).show();
@@ -117,20 +122,24 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     drawLinerChart.addPoint(lineChart,tools.timeToChartString(dataTimeStamp), dataTemp);
                     lineChart.setScaleMinima(1.0f,1.0f);
                     lineChart.getViewPortHandler().refresh(new Matrix(),lineChart,true);//重置坐标
-                    drawTracks.addNewLine(data);
+                    drawTracks.addNewLine(dataTemp,data.getLatLng());
 
                     panel.notifyDataSetChanged();
                     break;
                 case msgNewTrack:
                     TrackFormat format = scanSensor.getTrack(stringTableName);
-                    tvDebug.setText("当前显示:"+stringTableName);
-                    drawLinerChart.showChart(lineChart,format.getxDataList(),format.getyDataList(),"单位:ppm","TVoc/时间");
-                    lineChart.setScaleMinima(1.0f,1.0f);
-                    lineChart.getViewPortHandler().refresh(new Matrix(),lineChart,true);//重置坐标
-                    drawTracks.drawTracks(format);
-                    setHistoryDataToPanel(historyDataPanelAdapter,format);
-                    //panel.setPanelAdapter(historyDataPanelAdapter);
-                    panel.notifyDataSetChanged();
+                    if(format.getSize()>1) {
+                        tvDebug.setText("当前显示:" + stringTableName);
+                        drawLinerChart.showChart(lineChart, format.getxDataList(), format.getyDataList(), "单位:ppm", "TVoc/时间");
+                        lineChart.setScaleMinima(1.0f, 1.0f);
+                        lineChart.getViewPortHandler().refresh(new Matrix(), lineChart, true);//重置坐标
+                        drawTracks.drawTracks(format);
+                        setHistoryDataToPanel(historyDataPanelAdapter, format);
+                        //panel.setPanelAdapter(historyDataPanelAdapter);
+                        panel.notifyDataSetChanged();
+                    }else{
+                        Toast.makeText(MainActivity.this,"历史数据文件:" + stringTableName+"异常",Toast.LENGTH_SHORT).show();
+                    }
                     break;
                 case msgNewConnect:
                     dialog = new DialogProcessFragmentBarStyle();
