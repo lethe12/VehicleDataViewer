@@ -57,12 +57,14 @@ public class RealTimeTable {
     }
 
     public void addOneItem(HistoryDataPanelAdapter adapter ,long date,SensorData data){
-        dateList.add(tools.timeToChartString(date));
+        dateList.add(0,tools.timeToChartString(date));
+        //dateList.add(tools.timeToChartString(date));
         List<String> item = new ArrayList<>();
         item.add(tools.float2String4((float) data.getMeanTVoc()));
         item.add(tools.float2String4((float) data.getLat()));
         item.add(tools.float2String4((float) data.getLng()));
-        dataList.add(item);
+        dataList.add(0,item);
+        //dataList.add(item);
         adapter.setData(dataList);
         adapter.setDate(dateList);
     }

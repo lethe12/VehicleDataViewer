@@ -61,7 +61,7 @@ public class DrawLinerChart {
         LineData lineData = lineChart.getData();
         ILineDataSet dataSet = lineData.getMaxEntryCountSet();
         dataSet.addEntry(entry);
-        Log.d(tag,"index= "+String.valueOf(index));
+        //Log.d(tag,"index= "+String.valueOf(index));
 
         lineData.notifyDataChanged();
         lineChart.notifyDataSetChanged();
