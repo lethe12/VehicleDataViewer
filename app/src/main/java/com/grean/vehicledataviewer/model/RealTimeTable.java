@@ -14,7 +14,7 @@ import java.util.List;
  */
 
 public class RealTimeTable {
-    private static final String[] elementNames ={"TVoc","经度","纬度"};
+    private static final String[] elementNames ={"TVoc","纬度","经度"};
     private static final String[] elementUnit={"ppm"," "," "};
     private List<String> dateList = new ArrayList<>();
     private List<List<String>> dataList = new ArrayList<>();
