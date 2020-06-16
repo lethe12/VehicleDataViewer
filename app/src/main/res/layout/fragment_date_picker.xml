@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tvDatePickerTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="请选择查询时间"
+        android:textSize="24sp" />
+
+    <TextView
+        android:id="@+id/tvDatePickerStart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="起始时间: 2020-6-15"
+        android:textSize="24sp" />
+
+    <TextView
+        android:id="@+id/tvDatePickerEnd"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="终止时间: 2020-6-16"
+        android:textSize="24sp" />
+
+    <LinearLayout
+        android:layout_width="460dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_weight="1"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnDatePickerCancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="45dp"
+            android:text="取消" />
+
+        <Button
+            android:id="@+id/btnDatePickerComfirm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:text="确定" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,6 +1,8 @@
 package com.grean.vehicledataviewer;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
@@ -19,8 +21,10 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.ScrollablePanel.ElementInfo;
@@ -42,6 +46,8 @@ import com.grean.vehicledataviewer.model.LocalServerManger;
 import com.grean.vehicledataviewer.model.RealTimeTable;
 import com.grean.vehicledataviewer.model.ScanSensor;
 import com.grean.vehicledataviewer.model.TrackFormat;
+import com.grean.vehicledataviewer.presenter.DatePickerListener;
+import com.grean.vehicledataviewer.presenter.DialogFragmentDatePicker;
 import com.grean.vehicledataviewer.presenter.DialogProcessFragmentBarStyle;
 import com.grean.vehicledataviewer.presenter.LocalServerListener;
 import com.grean.vehicledataviewer.presenter.MainDisplayListener;
@@ -49,9 +55,10 @@ import com.grean.vehicledataviewer.protocol.GetProtocols;
 import com.tools;
 import com.grean.vehicledataviewer.R;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements MainDisplayListener,View.OnClickListener,LocalServerListener,MKOfflineMapListener {
+public class MainActivity extends AppCompatActivity implements MainDisplayListener,View.OnClickListener,LocalServerListener,MKOfflineMapListener,DatePickerListener {
     private static final String tag = "MainActivity";
     private MapView mMapView = null;
     private BaiduMap baiduMap;
@@ -70,8 +77,7 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     private RealTimeTable table;
     private ScrollablePanel panel;
     private HistoryDataPanelAdapter historyDataPanelAdapter;
-
-
+    private List<String>pickedStrings = new ArrayList<>();
 
     private DialogProcessFragmentBarStyle dialog;
     private String stringToast,stringTableName;
@@ -79,7 +85,8 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     private boolean scanResult;
     private static final int msgDismissDialog = 1,msgRealTimeData = 2,
             msgToast = 3,msgNewPoint=4,msgNewTrack=5,msgSetFirstPoint=6,
-    msgNewConnect=7,msgSearchData=8,msgDeleteData=9,msgExportData=11;
+    msgNewConnect=7,msgSearchData=8,msgDeleteData=9,msgExportData=11,
+            msgPickDateForSearchData=12,msgPickDateForExportData=13;
 
     private Handler handler = new Handler(){
         @Override
@@ -123,7 +130,6 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     lineChart.setScaleMinima(1.0f,1.0f);
                     lineChart.getViewPortHandler().refresh(new Matrix(),lineChart,true);//重置坐标
                     drawTracks.addNewLine(dataTemp,data.getLatLng());
-
                     panel.notifyDataSetChanged();
                     break;
                 case msgNewTrack:
@@ -161,31 +167,58 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     }).setNegativeButton("否", null).show();
                     break;
                 case msgSearchData:
-                    String[] strings = scanSensor.getTrackListStrings();
-                    new AlertDialog.Builder(MainActivity.this).setTitle("历史走航数据").setSingleChoiceItems(strings, -1, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            stringTableName = strings[which];
-                            handler.sendEmptyMessage(msgNewTrack);
-                            dialog.dismiss();
+                    //String[] strings = scanSensor.getTrackListStrings();
+                    if(pickedStrings.size()>0) {
+                        String[] strings = new String[pickedStrings.size()];
+                        for(int i=0;i<strings.length;i++){
+                            strings[i] = pickedStrings.get(i);
                         }
-                    }).show();
+                        new AlertDialog.Builder(MainActivity.this).setTitle("历史走航数据").setSingleChoiceItems(strings, -1, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                stringTableName = strings[which];
+                                handler.sendEmptyMessage(msgNewTrack);
+                                dialog.dismiss();
+                            }
+                        }).show();
+                    }
+                    break;
+                case msgPickDateForSearchData:
+                    new DialogFragmentDatePicker(MainActivity.this,
+                            "请选择需要查询时间","起始时间:"+tools.nowtime2string(),
+                            "终止时间:"+tools.timestamp2string(tools.nowtime2timestamp()-24*3600*1000l),
+                            DialogFragmentDatePicker.FUN_SEARCH)
+                            .show(getFragmentManager(),"PickDateForSearchData");
+
                     break;
                 case msgExportData:
-                    String[] trackListStrings = scanSensor.getTrackListStrings();
-                    new AlertDialog.Builder(MainActivity.this).setTitle("选择导出走航数据").setSingleChoiceItems(trackListStrings, -1, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            stringTableName = trackListStrings[which];
-                            String fileName = "走航数据"+stringTableName+"_Export"+tools.nowTime2FileString();
-                            if(scanSensor.exportDataToFile(stringTableName,fileName)){
-                                Toast.makeText(MainActivity.this,"导出成功,路径为 /Grean/"+fileName+".txt",Toast.LENGTH_SHORT).show();
-                            }else{
-                                Toast.makeText(MainActivity.this,"导出失败!",Toast.LENGTH_SHORT).show();
-                            }
-                            dialog.dismiss();
+                    //String[] trackListStrings = scanSensor.getTrackListStrings();
+                    if(pickedStrings.size()>0) {
+                        String[] trackListStrings = new String[pickedStrings.size()];
+                        for(int i=0;i<trackListStrings.length;i++){
+                            trackListStrings[i] = pickedStrings.get(i);
                         }
-                    }).show();
+                        new AlertDialog.Builder(MainActivity.this).setTitle("选择导出走航数据").setSingleChoiceItems(trackListStrings, -1, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                stringTableName = trackListStrings[which];
+                                String fileName = "走航数据" + stringTableName + "_Export" + tools.nowTime2FileString();
+                                if (scanSensor.exportDataToFile(stringTableName, fileName)) {
+                                    Toast.makeText(MainActivity.this, "导出成功,路径为 /Grean/" + fileName + ".txt", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(MainActivity.this, "导出失败!", Toast.LENGTH_SHORT).show();
+                                }
+                                dialog.dismiss();
+                            }
+                        }).show();
+                    }
+                    break;
+                case msgPickDateForExportData:
+                    new DialogFragmentDatePicker(MainActivity.this,
+                            "请选择需要导出时间","起始时间:"+tools.nowtime2string(),
+                            "终止时间:"+tools.timestamp2string(tools.nowtime2timestamp()-24*3600*1000l),
+                            DialogFragmentDatePicker.FUN_EXPORT)
+                            .show(getFragmentManager(),"PickDateForExportData");
                     break;
                 default:
                     break;
@@ -472,10 +505,10 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
                     public void onClick(DialogInterface dialog, int which) {
                         switch (which){
                             case 0:
-                                handler.sendEmptyMessage(msgSearchData);
+                                handler.sendEmptyMessage(msgPickDateForSearchData);
                                 break;
                             case 1:
-                                handler.sendEmptyMessage(msgExportData);
+                                handler.sendEmptyMessage(msgPickDateForExportData);
                                 break;
                             case 2:
                                 handler.sendEmptyMessage(msgDeleteData);
@@ -549,5 +582,38 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
     @Override
     public void onGetOfflineMapState(int i, int i1) {
         //Log.d(tag,"type = "+String.valueOf(i)+"state = "+String.valueOf(i1));
+    }
+
+    private long trackNameToTimeStamp(String name){
+        String year = name.substring(6,10);
+        String month = name.substring(10,12);
+        String day = name.substring(12,14);
+        String hour = name.substring(14,16);
+        String min = name.substring(16,18);
+        return tools.string2timestamp(year+"-"+month+"-"+day+" "+hour+":"+min);
+    }
+
+    @Override
+    public void onComplete(long start, long end,int fun) {
+        String[] strings = scanSensor.getTrackListStrings();
+        pickedStrings = new ArrayList<>();
+        long date;
+        for (int i=0;i<strings.length;i++){
+            date = trackNameToTimeStamp(strings[i]);
+            if((date>start)&&(date<end)){
+                pickedStrings.add(strings[i]);
+                Log.d(tag,"date picker"+strings[i]);
+            }
+        }
+        if(pickedStrings.size()>0) {
+            if(fun==DialogFragmentDatePicker.FUN_SEARCH) {
+                handler.sendEmptyMessage(msgSearchData);
+            }else {
+                handler.sendEmptyMessage(msgExportData);
+            }
+        }else{
+            Toast.makeText(this,"选择日期无数据",Toast.LENGTH_SHORT).show();
+        }
+
     }
 }
