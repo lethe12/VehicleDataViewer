@@ -278,7 +278,9 @@ public class MainActivity extends AppCompatActivity implements MainDisplayListen
         GetProtocols.getInstance().setProtocolInfo(scanSensor);
 
         baiduMap = mMapView.getMap();
+
         drawTracks = new DrawTracks(baiduMap);
+        baiduMap.setOnMapStatusChangeListener(drawTracks);
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         //获取当前可用的位置控制器
         List<String> list = locationManager.getProviders(true);
