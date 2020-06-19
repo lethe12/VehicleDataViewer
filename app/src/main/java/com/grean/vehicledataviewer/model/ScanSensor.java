@@ -84,6 +84,7 @@ public class ScanSensor implements ProtocolInfo{
     }
 
     public boolean exportDataToFile(String trackName,String fileName){
+        storeData.exportToExcel(trackName,fileName);
         return storeData.exportToFile(trackName,fileName);
     }
 

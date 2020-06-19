@@ -22,6 +22,13 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import jxl.Workbook;
+import jxl.write.Label;
+import jxl.write.WritableSheet;
+import jxl.write.WritableWorkbook;
+import jxl.write.WriteException;
+import jxl.write.biff.RowsExceededException;
+
 /**
  * 存储，读取数据
  * Created by weifeng on 2020/5/11.
@@ -144,6 +151,73 @@ public class ScanStoreData {
 
     }
 
+    public boolean exportToExcel(String trackName,String fileNameString){
+        String pathName = "/storage/emulated/0/GREAN/"; // /storage/sdcard0/GREAN/
+        String fileName = fileNameString+".xls";
+        File path = new File(pathName);
+        File file = new File(path,fileName);
+        try {
+            if (!path.exists()) {
+                //Log.d("TestFile", "Create the path:" + pathName);
+                path.mkdir();
+            }
+            if (!file.exists()) {
+                //Log.d("TestFile", "Create the file:" + fileName);
+                file.createNewFile();
+            }
+            WritableWorkbook wwb;
+            OutputStream os = new FileOutputStream(file);
+            wwb = Workbook.createWorkbook(os);
+            WritableSheet sheet;
+            SensorHistoryDataFormat format = getTrackData(trackName);
+            int elementMax = format.getSize();
+            if(elementMax > 0){
+                int sheetMax = elementMax /65534;
+                sheetMax += 1;
+                int index = 0;
+                for(int i=0;i<sheetMax;i++){
+                    sheet = wwb.createSheet("Sheet"+String.valueOf(i+1),i);
+                    addTitle(sheet);
+                    if((elementMax - index)>=65534){
+                        addOneSheet(sheet,format,index,index+65534);
+                        index += 65534;
+                    }else{
+                        addOneSheet(sheet,format,index,elementMax);
+                        break;
+                    }
+                }
+
+            }else{
+                sheet = wwb.createSheet("sheet1",0);
+                addTitle(sheet);
+            }
+
+
+            wwb.write();
+            os.flush();
+            wwb.close();
+            //需要关闭输出流，结束占用，否则系统会 结束 app
+            os.close();
+
+
+
+            /*FileOutputStream fos = new FileOutputStream(file);
+            OutputStreamWriter osw = new OutputStreamWriter(fos);
+            SensorHistoryDataFormat format = getTrackData(trackName);
+            osw.write(getHistoryDataString(format,trackName));
+            osw.flush();
+            fos.flush();
+            osw.close();
+            fos.close();*/
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (WriteException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public boolean exportToFile(String trackName,String fileNameString){
         String pathName = "/storage/emulated/0/GREAN/"; // /storage/sdcard0/GREAN/
         String fileName = fileNameString+".txt";
@@ -158,6 +232,8 @@ public class ScanStoreData {
                 //Log.d("TestFile", "Create the file:" + fileName);
                 file.createNewFile();
             }
+
+
             FileOutputStream fos = new FileOutputStream(file);
             OutputStreamWriter osw = new OutputStreamWriter(fos);
             SensorHistoryDataFormat format = getTrackData(trackName);
@@ -167,15 +243,45 @@ public class ScanStoreData {
             osw.close();
             fos.close();
             return true;
-        } catch (IOException e) {
+        }catch (IOException e) {
             e.printStackTrace();
+            return false;
         } catch (JSONException e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
+    private void addOneSheet(WritableSheet sheet, SensorHistoryDataFormat format, int index, int max) throws WriteException {
+        int row=1;
+        //List<String> element;
+        for(int i=index;i<max;i++){
 
+            Label label;
+            label = new Label(0,row,tools.timeToChartString(format.getTime().get(i)));
+            sheet.addCell(label);
+            label = new Label(1,row,tools.float2String4(format.getTVoc().get(i)));
+            sheet.addCell(label);
+            label = new Label(2,row,tools.float2String4(format.getLat().get(i).floatValue()));
+            sheet.addCell(label);
+            label = new Label(3,row,tools.float2String4(format.getLng().get(i).floatValue()));
+            sheet.addCell(label);
+            row++;
+        }
+    }
+
+    private void addTitle(WritableSheet sheet) throws WriteException {
+        Label label;
+        label = new Label(0,0,"时间");
+        sheet.addCell(label);
+        label = new Label(1,0,"TVoc ppm");
+        sheet.addCell(label);
+        label = new Label(2,0,"纬度");
+        sheet.addCell(label);
+        label = new Label(3,0,"经度");
+        sheet.addCell(label);
+
+    }
 
     private SensorHistoryDataFormat getTrackData(String name){
         SensorHistoryDataFormat format = new SensorHistoryDataFormat();
